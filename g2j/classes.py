@@ -3,7 +3,7 @@
 
 import json
 
-import grouping
+from g2j import grouping
 
 
 class Serialiser:

@@ -3,7 +3,7 @@
 
 import re
 
-from classes import Organism, Scaffold, Feature, Location
+from g2j.classes import Organism, Scaffold, Feature, Location
 
 
 PATTERNS = {

@@ -2,8 +2,7 @@
 
 import argparse
 
-import genbank
-import gff3
+from g2j import genbank, gff3
 
 
 def parse(
@@ -25,6 +24,9 @@ def parse(
         print(f"  {fasta_handle.name}")
         organism = gff3.parse(gff3_handle, fasta_handle)
 
+    else:
+        raise ValueError("Expected GenBank or GFF3+FASTA")
+
     if grouped:
         print("Grouping overlapping sequence features")
         organism.group()
@@ -36,8 +38,24 @@ def parse(
     return organism
 
 
+def run():
+    args = get_arguments()
+    parse(
+        genbank_handle=args.genbank,
+        gff3_handle=args.general,
+        fasta_handle=args.fasta,
+        output_handle=args.output,
+        json_indent=args.json_indent,
+        grouped=args.grouped,
+    )
+
+
 def get_arguments():
-    parser = argparse.ArgumentParser("Genome2JSON")
+    parser = argparse.ArgumentParser(
+        "Genome2JSON",
+        description="Parse genomes in GenBank/GFF3 format, and convert to JSON",
+        epilog="Cameron Gilchrist 2020",
+    )
 
     inputs = parser.add_mutually_exclusive_group(required=True)
     inputs.add_argument(
@@ -76,13 +94,4 @@ def get_arguments():
 
 
 if __name__ == "__main__":
-    args = get_arguments()
-
-    parse(
-        genbank_handle=args.genbank,
-        gff3_handle=args.general,
-        fasta_handle=args.fasta,
-        output_handle=args.output,
-        json_indent=args.json_indent,
-        grouped=args.grouped,
-    )
+    run()

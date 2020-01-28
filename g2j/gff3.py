@@ -5,9 +5,8 @@ import re
 
 from collections import defaultdict
 
-import fasta
-
-from classes import Feature, Scaffold, Organism
+from g2j import fasta
+from g2j.classes import Feature, Scaffold, Organism
 
 
 def parse_attributes(string):
