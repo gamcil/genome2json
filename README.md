@@ -1,2 +1,4 @@
 # genome2json
-Parse GenBank/GFF3 to JSON
+Parse genomes in GenBank/GFF3 format to JSON
+
+Pure Python using builtin libraries.
