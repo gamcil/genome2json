@@ -76,7 +76,7 @@ def parse_feature_block(text):
 
     # Separate location and qualifiers (if any)
     # e.g. 1..100/qualifier1="value"/qualifier2="value"
-    for index, feature in enumerate(features):
+    for feature in features:
         parts = feature.qualifiers.split("/", 1)
         if len(parts) > 1:
             feature.qualifiers = {
