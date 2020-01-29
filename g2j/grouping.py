@@ -17,7 +17,8 @@ def split_genic_features(features):
 def attributes_match(one, two):
     # Check Parent= is same as ID= of previous feature in proper GFF file
     try:
-        return one.qualifiers["ID"] == two.qualifiers["Parent"]
+        if one.qualifiers["ID"] == two.qualifiers["Parent"]:
+            return True
     except KeyError:
         pass
 
@@ -31,24 +32,18 @@ def attributes_match(one, two):
         "ID",
         "locus_tag",
     }
-    common = set(one.qualifiers).intersection(two.qualifiers)
 
-    if not common & tags:
+    common = tags & set(one.qualifiers).intersection(two.qualifiers)
+
+    if not common:
         return False
 
     return any(one.qualifiers[key] == two.qualifiers[key] for key in common)
 
 
 def group_overlapping_features(features, check_attributes=False):
-    """Group overlapping sequence features.
+    """Group overlapping sequence features."""
 
-    Given a sorted list of features, and format-specific overrides
-    for self.features_overlap(), this generic iterator function will
-    group sequence features via location overlap.
-
-    This removes the dependence on shared identifier attributes
-    (i.e. locus tags or protein IDs), which are unreliable.
-    """
     if not features:
         return
 
@@ -65,7 +60,6 @@ def group_overlapping_features(features, check_attributes=False):
         else:
             yield group
             group, border = [feature], feature.location.max()
-
     yield group
 
 
@@ -99,11 +93,11 @@ def get_minimum(feature):
     return min(f.location.min() for f in feature)
 
 
-def group_features(features):
+def group_features(features, check_attributes=False):
     genic, other = split_genic_features(features)
     genic = [
         collapse_same_type_features(group)
-        for group in group_overlapping_features(genic, check_attributes=True)
+        for group in group_overlapping_features(genic, check_attributes)
         if group
     ]
     return sorted(genic + other, key=lambda f: get_minimum(f))
