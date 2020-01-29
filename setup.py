@@ -25,6 +25,7 @@ setuptools.setup(
     author="Cameron Gilchrist",
     description="Parse genomes in GenBank/GFF3 formats to JSON",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://www.github.com/gamcil/genome2json",
     packages=setuptools.find_packages(),
     classifiers=[
