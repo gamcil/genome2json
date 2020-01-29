@@ -2,7 +2,7 @@
 
 import argparse
 
-from g2j import genbank, gff3
+from g2j import genbank, gff3, __version__
 
 
 def parse(
@@ -55,6 +55,9 @@ def get_arguments():
         "Genome2JSON",
         description="Parse genomes in GenBank/GFF3 format, and convert to JSON",
         epilog="Cameron Gilchrist 2020",
+    )
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
     )
 
     inputs = parser.add_mutually_exclusive_group(required=True)

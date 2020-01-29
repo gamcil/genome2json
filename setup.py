@@ -1,8 +1,22 @@
 import setuptools
+import re
+
+from pathlib import Path
 
 
 with open("README.md", "r") as fp:
     long_description = fp.read()
+
+
+def get_version():
+    """Get version number from __init__.py"""
+    version_file = Path(__file__).resolve().parent / "g2j" / "__init__.py"
+    version_match = re.search(
+        r"^__version__ = ['\"]([^'\"]*)['\"]", version_file.read_text(), re.M
+    )
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Failed to find version string")
 
 
 setuptools.setup(
