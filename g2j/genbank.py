@@ -3,6 +3,8 @@
 
 import re
 
+from pathlib import Path
+
 from g2j.classes import Organism, Scaffold, Feature, Location
 
 
