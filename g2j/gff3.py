@@ -55,7 +55,7 @@ def parse(gff_handle, fasta_handle, name=None, strain=None):
 
         # Location
         feature.location.strand = strand
-        feature.location.start.append(int(start))
+        feature.location.start.append(int(start) - 1)
         feature.location.end.append(int(end))
 
         # Any extra saved attributes
