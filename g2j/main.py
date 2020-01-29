@@ -28,11 +28,12 @@ def parse(
         raise ValueError("Expected GenBank or GFF3+FASTA")
 
     if grouped:
-        print("Grouping overlapping sequence features")
+        print("\nGrouping overlapping sequence features")
         organism.group()
 
     if output_handle:
-        print(f"Writing JSON: {output_handle.name}")
+        print("\nWriting JSON: ")
+        print(f"  {output_handle.name}")
         organism.to_json(fp=output_handle, indent=json_indent)
 
     return organism
