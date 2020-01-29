@@ -73,6 +73,9 @@ class Scaffold(Serialiser):
     def __str__(self):
         return f"{self.accession} [{len(self.features)} features]"
 
+    def __len__(self):
+        return len(self.sequence)
+
     def group(self):
         """Group sequence features by overlap/shared attributes."""
         self.features = grouping.group_features(self.features)
