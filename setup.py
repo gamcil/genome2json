@@ -21,7 +21,7 @@ def get_version():
 
 setuptools.setup(
     name="genome2json",
-    version="0.0.1",
+    version=get_version(),
     author="Cameron Gilchrist",
     description="Parse genomes in GenBank/GFF3 formats to JSON",
     long_description=long_description,
