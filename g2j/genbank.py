@@ -3,13 +3,14 @@
 
 import re
 
+from collections import defaultdict
 from pathlib import Path
 
-from g2j.classes import Organism, Scaffold, Feature, Location
+from g2j.classes import Organism, Scaffold, Feature, Location, Interval
 
 
 PATTERNS = {
-    "scaffold": re.compile(r"LOCUS\s+?(?P<accession>\b[\w.-]+?)\s.+?//", re.DOTALL),
+    "scaffold": re.compile(r"LOCUS\s+?(?P<accession>\b[\w.-]+?)\s.+?\n//", re.DOTALL),
     "organism": re.compile(r"ORGANISM\s+?(?P<organism>\w[\w .-]+?)[\n\r]"),
     "strain": re.compile(r'/strain="(?P<strain>([\w .-]+?))"'),
     "features": re.compile(
@@ -17,10 +18,11 @@ PATTERNS = {
     ),
     "sequence": re.compile(r"ORIGIN\s+?([^\s].*)", re.DOTALL),
     "identifier": re.compile(r'(protein_id|locus_tag|gene|ID)="([\w.:-]+?)"'),
+    "qualifier": re.compile(r'/(\w+?)=(?:"(.+?)"|(\d+?))', re.DOTALL),
 }
 
 
-def parse_location(string):
+def parse_location(string, codon_start):
     """Parse GenBank location string."""
 
     location = Location(
@@ -36,10 +38,65 @@ def parse_location(string):
 
     for span in string.split(","):
         part = [int(x) for x in span.split("..")]
-        location.start.append(part[0] - 1)
-        location.end.append(part[0] if len(part) == 1 else part[1])
+        start = part[0] - 1
+        end = part[0] if len(part) == 1 else part[1]
+        location.intervals.append(Interval(start, end))
+
+    set_CDS_interval_phases(location, codon_start)
 
     return location
+
+
+def compute_phase(start, end, offset=0):
+    leftover = abs(end - start + offset) % 3
+    return 0 if leftover == 0 else 2 - leftover
+
+
+def set_CDS_interval_phases(location, codon_start):
+    """Compute phase (a la GFF3 files) of a feature location."""
+
+    # Initial CDS phase is just codon_start - 1 (zero index)
+    phases = [codon_start - 1]
+
+    # Compute phases in staggered fashion
+    for interval in location.intervals:
+        interval.phase = phases[-1]
+        phase = compute_phase(interval.start, interval.end, interval.phase)
+        phases.append(phase)
+
+
+def parse_qualifier_block(text):
+    """Parse qualifiers from qualifier block.
+
+
+    Qualifiers are split by newline -> 21 spaces -> slash
+    If value, Remove leading/trailing ", leading newline -> 21 spaces
+    Otherwise it's boolean, e.g. /pseudo, so set True
+
+    Store qualifiers of same type in lists, otherwise just str
+    """
+    qualifiers = {}
+    gap = "\n" + " " * 21
+
+    for qualifier in text.split(f"{gap}/"):
+        key, *value = qualifier.split("=")
+
+        # Determine if boolean or str value
+        if value:
+            value = value[0].lstrip('"').strip('"\n').replace(gap, "")
+        else:
+            value = True
+
+        # Save multiple qualifiers of same type in lists
+        if key in qualifiers:
+            if isinstance(qualifiers[key], list):
+                qualifiers[key].append(value)
+            else:
+                qualifiers[key] = [qualifiers.pop(key), value]
+        else:
+            qualifiers[key] = value
+
+    return qualifiers
 
 
 def parse_feature_block(text):
@@ -57,34 +114,40 @@ def parse_feature_block(text):
     Separate feature blocks are identified by looking for differences in whitespace;
     new feature lines start with 5 spaces, qualifiers with 21.
     """
-    # RegEx pattern to extract qualifiers, e.g. /locus_tag="GENE_0001"
-    pattern = re.compile(r'/(\w+?)="(.+?)"')
-
-    feature = None
+    pattern = re.compile(r"^ {5}(\w+?)\s+([^/]+)", re.M | re.DOTALL)
     features = []
+    text_length = len(text)
 
-    for line in text.split("\n"):
-        if not line or line.isspace():
-            continue
-        if not line.startswith("                     "):
-            if feature:
-                features.append(feature)
-            header, rest = line.strip().split()
-            feature = Feature(header, qualifiers=rest)
-        else:
-            feature.qualifiers += line.strip()
-    if feature:
+    # Get positions of each unique sequence feature
+    for match in pattern.finditer(text):
+        feature = {
+            "type": match.group(1),
+            "location": match.group(2).replace(" ", "").replace("\n", ""),
+            "interval": [match.end(), text_length],
+        }
+        if features:
+            features[-1]["interval"][1] = match.start()
+
         features.append(feature)
 
-    # Separate location and qualifiers (if any)
-    # e.g. 1..100/qualifier1="value"/qualifier2="value"
-    for feature in features:
-        parts = feature.qualifiers.split("/", 1)
-        if len(parts) > 1:
-            feature.qualifiers = {
-                key: value for key, value in pattern.findall(f"/{parts[1]}")
-            }
-        feature.location = parse_location(parts[0])
+    # Convert above to Feature objects
+    for ix, feature in enumerate(features):
+
+        # Get qualifier text corresponding to the current feature
+        # The start+1 gets rid of the / in the first qualifier
+        start, end = feature["interval"]
+        qualifiers = parse_qualifier_block(text[start + 1 : end])
+
+        try:
+            codon_start = int(qualifiers["codon_start"])
+        except KeyError:
+            codon_start = 1
+
+        features[ix] = Feature(
+            type=feature["type"],
+            location=parse_location(feature["location"], codon_start),
+            qualifiers=qualifiers,
+        )
 
     return features
 

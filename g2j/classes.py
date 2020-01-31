@@ -125,6 +125,11 @@ class Feature(Serialiser):
     def __str__(self):
         return f"{self.type} {str(self.location)}"
 
+    def __iadd__(self, other):
+        self.location += other.location
+        self.qualifiers.update(other.qualifiers)
+        return self
+
     def is_genic(self):
         return self.type in {
             "gene",
@@ -161,31 +166,44 @@ class Feature(Serialiser):
 
 
 class Location(Serialiser):
-    __slots__ = ("start", "end", "strand", "five_is_partial", "three_is_partial")
+    __slots__ = ("intervals", "strand", "five_is_partial", "three_is_partial")
 
     def __init__(
-        self,
-        start=None,
-        end=None,
-        strand="+",
-        five_is_partial=False,
-        three_is_partial=False,
+        self, intervals=None, strand="+", five_is_partial=False, three_is_partial=False,
     ):
-        self.start = start if start else []
-        self.end = end if end else []
+        self.intervals = intervals if intervals else []
         self.strand = strand
         self.five_is_partial = five_is_partial
         self.three_is_partial = three_is_partial
 
     def __str__(self):
-        loc = ",".join(f"{start}..{end}" for start, end in zip(self.start, self.end))
+        loc = ",".join(f"{start}..{end}" for start, end in self.iter_intervals())
         return f"{loc}[{self.strand}]"
 
+    def __len__(self):
+        return self.max() - self.min()
+
+    def __iadd__(self, other):
+        self.intervals.extend(other.intervals)
+        self.five_is_partial |= other.five_is_partial
+        self.three_is_partial |= other.three_is_partial
+        return self
+
+    def iter_intervals(self):
+        for interval in self.intervals:
+            yield interval.start, interval.end
+
+    def starts(self):
+        return [i.start for i in self.intervals]
+
+    def ends(self):
+        return [i.end for i in self.intervals]
+
     def min(self):
-        return min(self.start)
+        return min(self.starts())
 
     def max(self):
-        return max(self.end)
+        return max(self.ends())
 
     def flip(self):
         """Flip strand and five/three end flags."""
@@ -196,8 +214,35 @@ class Location(Serialiser):
         )
 
     def to_dict(self):
-        return {slot: getattr(self, slot) for slot in self.__slots__}
+        return {
+            "intervals": [i.to_dict() for i in self.intervals],
+            "strand": self.strand,
+            "five_is_partial": self.five_is_partial,
+            "three_is_partial": self.three_is_partial,
+        }
 
     @classmethod
     def from_dict(cls, d):
-        return cls(**d)
+        return cls(
+            intervals=[Interval.from_dict(i) for i in d["intervals"]],
+            strand=d["strand"],
+            five_is_partial=d["five_is_partial"],
+            three_is_partial=d["three_is_partial"],
+        )
+
+
+class Interval(Serialiser):
+    def __init__(self, start, end, phase=None):
+        self.start = start
+        self.end = end
+        self.phase = phase
+
+    def __str__(self):
+        return f"{self.start}-{self.end} [phase={self.phase}]"
+
+    def to_dict(self):
+        return {"start": self.start, "end": self.end, "phase": self.phase}
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(start=d["start"], end=d["end"], phase=d["phase"])

@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 
 from g2j import fasta
-from g2j.classes import Feature, Scaffold, Organism
+from g2j.classes import Feature, Scaffold, Organism, Interval, Location
 
 
 def parse_attributes(string):
@@ -31,11 +31,30 @@ def parse_attributes(string):
     return attributes
 
 
+def set_partiality(feature):
+    """
+
+    """
+    partial = "partial" in feature.qualifiers
+    start_range = "start_range" in feature.qualifiers
+    end_range = "end_range" in feature.qualifiers
+
+    if not (partial and (start_range or end_range)):
+        return
+
+    if feature.location.strand == "+":
+        feature.location.three_is_partial = end_range
+        feature.location.five_is_partial = start_range
+    else:
+        feature.location.three_is_partial = start_range
+        feature.location.five_is_partial = end_range
+
+
 def parse(gff_handle, fasta_handle, name=None, strain=None):
     """Parse open GFF3 file handle.
 
-    Note that individual rows are treated as separate features. For example, a CDS split
-    over 5 rows would result in 5 separate Feature objects.
+    Note that individual rows are treated as separate features. For example, a
+    CDS split over 5 rows would result in 5 separate Feature objects.
     """
 
     scaffolds = defaultdict(list)
@@ -49,17 +68,23 @@ def parse(gff_handle, fasta_handle, name=None, strain=None):
 
         assert len(fields) == 8, "Malformed GFF, field number mismatch"
 
-        source, type, start, end, _, strand, _, attributes = fields
+        _, type, start, end, _, strand, phase, attributes = fields
 
         feature = Feature(type)
 
         # Location
+        if phase.isdigit():
+            phase = int(phase)
+        interval = Interval(int(start) - 1, int(end), phase=phase)
+        feature.location.intervals.append(interval)
         feature.location.strand = strand
-        feature.location.start.append(int(start) - 1)
-        feature.location.end.append(int(end))
 
         # Any extra saved attributes
         feature.qualifiers.update(parse_attributes(attributes))
+
+        # Partiality, assume non-partial but NCBI files will have partial=true,
+        # start/end_range qualifiers
+        set_partiality(feature)
 
         # Save to scaffold
         scaffolds[scaffold].append(feature)
