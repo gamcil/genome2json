@@ -114,7 +114,7 @@ def parse_feature_block(text):
     Separate feature blocks are identified by looking for differences in whitespace;
     new feature lines start with 5 spaces, qualifiers with 21.
     """
-    pattern = re.compile(r"^ {5}(\w+?)\s+([^/]+)", re.M | re.DOTALL)
+    pattern = re.compile(r"^ {5}([\w0-9']+?)\s+([^/]+)", re.M | re.DOTALL)
     features = []
     text_length = len(text)
 
