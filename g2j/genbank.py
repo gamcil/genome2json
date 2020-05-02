@@ -48,6 +48,7 @@ def parse_location(string, codon_start):
 
 
 def compute_phase(start, end, offset=0):
+    """Calculate phase (GFF attribute) of a sequence feature."""
     leftover = abs(end - start + offset) % 3
     return 0 if leftover == 0 else 2 - leftover
 
@@ -99,7 +100,7 @@ def parse_qualifier_block(text):
     return qualifiers
 
 
-def parse_feature_block(text):
+def parse_feature_block(text, types=None):
     """Parse features from feature block.
 
     Block should resemble:
@@ -111,8 +112,11 @@ def parse_feature_block(text):
 
     as matched using PATTERNS["features"].
 
-    Separate feature blocks are identified by looking for differences in whitespace;
-    new feature lines start with 5 spaces, qualifiers with 21.
+    Separate feature blocks are identified by looking for differences
+    in whitespace; new feature lines start with 5 spaces, qualifiers
+    with 21.
+
+    types (list): parsed features must be one of these types
     """
     pattern = re.compile(r"^ {5}([\w0-9']+?)\s+([^/]+)", re.M | re.DOTALL)
     features = []
@@ -125,6 +129,10 @@ def parse_feature_block(text):
             "location": match.group(2).replace(" ", "").replace("\n", ""),
             "interval": [match.end(), text_length],
         }
+
+        if types and feature["type"] not in types:
+            continue
+
         if features:
             features[-1]["interval"][1] = match.start()
 
@@ -185,7 +193,7 @@ def find_pattern(pattern, text):
         return None
 
 
-def parse(handle):
+def parse(handle, feature_types=None):
     """Parse a GenBank file."""
 
     organism = Organism()
@@ -207,7 +215,7 @@ def parse(handle):
             scaffold = Scaffold(
                 accession,
                 get_scaffold_sequence(text),
-                parse_feature_block(feature_block),
+                parse_feature_block(feature_block, types=feature_types),
             )
             organism.scaffolds.append(scaffold)
 

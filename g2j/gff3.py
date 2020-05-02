@@ -50,11 +50,11 @@ def set_partiality(feature):
         feature.location.five_is_partial = end_range
 
 
-def parse(gff_handle, fasta_handle, name=None, strain=None):
-    """Parse open GFF3 file handle.
+def parse(gff_handle, fasta_handle, name=None, strain=None, feature_types=None):
+    """Parse a GFF3 file.
 
     Note that individual rows are treated as separate features. For example, a
-    CDS split over 5 rows would result in 5 separate Feature objects.
+    CDS split over 5 rows will result in 5 separate Feature objects.
     """
 
     scaffolds = defaultdict(list)
@@ -69,6 +69,9 @@ def parse(gff_handle, fasta_handle, name=None, strain=None):
         assert len(fields) == 8, "Malformed GFF, field number mismatch"
 
         _, type, start, end, _, strand, phase, attributes = fields
+
+        if feature_types and type not in feature_types:
+            continue
 
         feature = Feature(type)
 

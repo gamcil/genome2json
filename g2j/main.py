@@ -1,8 +1,15 @@
-"""Entry point."""
-
 import argparse
+import logging
 
 from g2j import genbank, gff3, __version__
+
+
+logging.basicConfig(
+    format="[%(asctime)s] %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S"
+)
+LOG = logging.getLogger("g2j")
+LOG.setLevel(logging.INFO)
 
 
 def parse(
@@ -12,28 +19,34 @@ def parse(
     output_handle=None,
     json_indent=2,
     grouped=False,
+    feature_types=None,
 ):
     if genbank_handle and not (gff3_handle or fasta_handle):
-        print("Parsing GenBank file:")
-        print(f"  {genbank_handle.name}")
-        organism = genbank.parse(genbank_handle)
-
+        LOG.info("Parsing GenBank file:")
+        LOG.info(f"  {genbank_handle.name}")
+        organism = genbank.parse(
+            genbank_handle,
+            feature_types=feature_types
+        )
     elif gff3_handle and fasta_handle:
-        print("Parsing GFF3 and FASTA files:")
-        print(f"  {gff3_handle.name}")
-        print(f"  {fasta_handle.name}")
-        organism = gff3.parse(gff3_handle, fasta_handle)
-
+        LOG.info("Parsing GFF3 and FASTA files:")
+        LOG.info(f"  {gff3_handle.name}")
+        LOG.info(f"  {fasta_handle.name}")
+        organism = gff3.parse(
+            gff3_handle,
+            fasta_handle,
+            feature_types=feature_types
+        )
     else:
         raise ValueError("Expected GenBank or GFF3+FASTA")
 
     if grouped:
-        print("\nGrouping overlapping sequence features")
+        LOG.info("\nGrouping overlapping sequence features")
         organism.group()
 
     if output_handle:
-        print("\nWriting JSON: ")
-        print(f"  {output_handle.name}")
+        LOG.info("\nWriting JSON: ")
+        LOG.info(f"  {output_handle.name}")
         organism.to_json(fp=output_handle, indent=json_indent)
 
     return organism
@@ -57,17 +70,11 @@ def get_arguments():
         description="Parse genomes in GenBank/GFF3 format, and convert to JSON",
         epilog="Cameron Gilchrist 2020",
     )
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s " + __version__
-    )
+    parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
 
     inputs = parser.add_mutually_exclusive_group(required=True)
-    inputs.add_argument(
-        "-gbk", "--genbank", help="GenBank file", type=argparse.FileType("r")
-    )
-    inputs.add_argument(
-        "-gff", "--general", help="GFF3 file", type=argparse.FileType("r")
-    )
+    inputs.add_argument("-gbk", "--genbank", help="GenBank file", type=argparse.FileType("r"))
+    inputs.add_argument("-gff", "--general", help="GFF3 file", type=argparse.FileType("r"))
 
     parser.add_argument(
         "-fa",
@@ -82,12 +89,8 @@ def get_arguments():
         help="Save JSON to file",
         type=argparse.FileType("w"),
     )
-    parser.add_argument(
-        "--json_indent", help="Number of spaces to indent in JSON", type=int, default=2
-    )
-    parser.add_argument(
-        "--grouped", help="Group overlapping sequence features", action="store_true",
-    )
+    parser.add_argument("--json_indent", help="Number of spaces to indent in JSON", type=int, default=2)
+    parser.add_argument("--grouped", help="Group overlapping sequence features", action="store_true",)
 
     args = parser.parse_args()
 
