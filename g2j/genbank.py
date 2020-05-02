@@ -193,7 +193,7 @@ def find_pattern(pattern, text):
         return None
 
 
-def parse(handle, feature_types=None):
+def parse(handle, feature_types=None, save_scaffold_sequence=True):
     """Parse a GenBank file."""
 
     organism = Organism()
@@ -214,7 +214,7 @@ def parse(handle, feature_types=None):
         if feature_block:
             scaffold = Scaffold(
                 accession,
-                get_scaffold_sequence(text),
+                get_scaffold_sequence(text) if save_scaffold_sequence else "",
                 parse_feature_block(feature_block, types=feature_types),
             )
             organism.scaffolds.append(scaffold)

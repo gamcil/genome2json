@@ -20,6 +20,7 @@ def parse(
     json_indent=2,
     grouped=False,
     feature_types=None,
+    save_scaffold_sequence=True,
 ):
     if genbank_handle and not (gff3_handle or fasta_handle):
         LOG.info("Parsing GenBank file:")
@@ -27,6 +28,7 @@ def parse(
         organism = genbank.parse(
             genbank_handle,
             feature_types=feature_types
+            save_scaffold_sequence=save_scaffold_sequence,
         )
     elif gff3_handle and fasta_handle:
         LOG.info("Parsing GFF3 and FASTA files:")
@@ -36,6 +38,7 @@ def parse(
             gff3_handle,
             fasta_handle,
             feature_types=feature_types
+            save_scaffold_sequence=save_scaffold_sequence,
         )
     else:
         raise ValueError("Expected GenBank or GFF3+FASTA")

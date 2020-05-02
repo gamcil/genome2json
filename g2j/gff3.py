@@ -50,7 +50,14 @@ def set_partiality(feature):
         feature.location.five_is_partial = end_range
 
 
-def parse(gff_handle, fasta_handle, name=None, strain=None, feature_types=None):
+def parse(
+    gff_handle,
+    fasta_handle,
+    name=None,
+    strain=None,
+    feature_types=None
+    save_scaffold_sequence=True,
+):
     """Parse a GFF3 file.
 
     Note that individual rows are treated as separate features. For example, a
@@ -93,14 +100,18 @@ def parse(gff_handle, fasta_handle, name=None, strain=None, feature_types=None):
         scaffolds[scaffold].append(feature)
 
     # Get assembly scaffold sequences from FASTA file
-    sequences = fasta.parse(fasta_handle)
+    if save_scaffold_sequence:
+        sequences = fasta.parse(fasta_handle)
 
     # Instantiate and return Organism
     return Organism(
         name,
         strain,
         scaffolds=[
-            Scaffold(accession, sequences[accession], features)
+            Scaffold(
+                accession,
+                sequences[accession] if save_scaffold_sequence else "",
+                features)
             for accession, features in scaffolds.items()
         ],
     )
