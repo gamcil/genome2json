@@ -130,9 +130,6 @@ def parse_feature_block(text, types=None):
             "interval": [match.end(), text_length],
         }
 
-        if types and feature["type"] not in types:
-            continue
-
         if features:
             features[-1]["interval"][1] = match.start()
 
@@ -156,6 +153,9 @@ def parse_feature_block(text, types=None):
             location=parse_location(feature["location"], codon_start),
             qualifiers=qualifiers,
         )
+
+    if types:
+        return [f for f in features if f.type in types]
 
     return features
 

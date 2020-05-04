@@ -16,7 +16,7 @@ def split_genic_features(features):
 
 
 def attribute_match(one, two):
-    """Find equal attribute between two Features."""
+    """Find a matching attribute in two Features."""
     tags = {
         "proteinId",
         "protein_id",
@@ -37,6 +37,7 @@ def attribute_match(one, two):
 
 def link_features(features):
     """Find feature groups by single linkage."""
+
     tags = {
         "proteinId",
         "protein_id",
@@ -92,8 +93,10 @@ def link_features(features):
 
 def iter_overlapping_features(features, check_attributes=False):
     """Group overlapping sequence features."""
+
     if not features:
         return
+
     sorted_features = sorted(features, key=lambda f: f.location.min())
     first = sorted_features.pop(0)
     group, border = [first], first.location.max()
@@ -108,6 +111,7 @@ def iter_overlapping_features(features, check_attributes=False):
         else:
             yield group
             group, border = [feature], feature.location.max()
+
     yield group
 
 
@@ -178,12 +182,14 @@ def get_maximum(feature):
 
 
 def get_length(feature):
+    """Get length of a feature."""
     if hasattr(feature, "location"):
         return len(feature.location)
     return get_maximum(feature) - get_minimum(feature)
 
 
 def group_features(features, check_attributes=True):
+    """Perform grouping on a collection of Feature objects."""
     genic, other = split_genic_features(features)
     results = []
     for group in group_overlapping_features(genic, check_attributes):

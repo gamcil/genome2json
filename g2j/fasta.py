@@ -1,7 +1,7 @@
 """FASTA parser."""
 
 
-def record_iter(handle):
+def iter_records(handle):
     """Parse FASTA file."""
 
     header = ""
@@ -20,4 +20,4 @@ def record_iter(handle):
 
 
 def parse(handle):
-    return {header: sequence for header, sequence in record_iter(handle)}
+    return {header: sequence for header, sequence in iter_records(handle)}
