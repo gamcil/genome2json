@@ -27,7 +27,7 @@ def parse(
         LOG.info(f"  {genbank_handle.name}")
         organism = genbank.parse(
             genbank_handle,
-            feature_types=feature_types
+            feature_types=feature_types,
             save_scaffold_sequence=save_scaffold_sequence,
         )
     elif gff3_handle and fasta_handle:
@@ -37,7 +37,7 @@ def parse(
         organism = gff3.parse(
             gff3_handle,
             fasta_handle,
-            feature_types=feature_types
+            feature_types=feature_types,
             save_scaffold_sequence=save_scaffold_sequence,
         )
     else:

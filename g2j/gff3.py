@@ -55,7 +55,7 @@ def parse(
     fasta_handle,
     name=None,
     strain=None,
-    feature_types=None
+    feature_types=None,
     save_scaffold_sequence=True,
 ):
     """Parse a GFF3 file.
