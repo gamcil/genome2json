@@ -25,6 +25,9 @@ PATTERNS = {
 def parse_location(string, codon_start):
     """Parse GenBank location string."""
 
+    # Strip out any whitespace
+    string = re.sub("\s", "", string)
+
     location = Location(
         five_is_partial=True if ">" in string else False,
         three_is_partial=True if "<" in string else False,
@@ -118,7 +121,8 @@ def parse_feature_block(text, types=None):
 
     types (list): parsed features must be one of these types
     """
-    pattern = re.compile(r"^ {5}([\w0-9']+?)\s+([^/]+)", re.M | re.DOTALL)
+    # RegEx pattern for finding feature starts
+    pattern = re.compile(r"^ {5}([\w0-9']+?)\s", re.M)
     features = []
     text_length = len(text)
 
@@ -126,13 +130,10 @@ def parse_feature_block(text, types=None):
     for match in pattern.finditer(text):
         feature = {
             "type": match.group(1),
-            "location": match.group(2).replace(" ", "").replace("\n", ""),
             "interval": [match.end(), text_length],
         }
-
         if features:
             features[-1]["interval"][1] = match.start()
-
         features.append(feature)
 
     # Convert above to Feature objects
@@ -141,7 +142,15 @@ def parse_feature_block(text, types=None):
         # Get qualifier text corresponding to the current feature
         # The start+1 gets rid of the / in the first qualifier
         start, end = feature["interval"]
-        qualifiers = parse_qualifier_block(text[start + 1 : end])
+        block = text[start:end].split("/", 1)
+
+        # Check for single line features
+        if len(block) == 1:
+            location = block[0]
+            qualifiers = {}
+        else:
+            location = block[0]
+            qualifiers = parse_qualifier_block(block[1])
 
         try:
             codon_start = int(qualifiers["codon_start"])
@@ -150,7 +159,7 @@ def parse_feature_block(text, types=None):
 
         features[ix] = Feature(
             type=feature["type"],
-            location=parse_location(feature["location"], codon_start),
+            location=parse_location(location, codon_start),
             qualifiers=qualifiers,
         )
 

@@ -23,17 +23,16 @@ def parse(
     save_scaffold_sequence=True,
 ):
     if genbank_handle and not (gff3_handle or fasta_handle):
-        LOG.info("Parsing GenBank file:")
-        LOG.info(f"  {genbank_handle.name}")
+        LOG.info(f"Parsing GenBank file: {genbank_handle.name}")
         organism = genbank.parse(
             genbank_handle,
             feature_types=feature_types,
             save_scaffold_sequence=save_scaffold_sequence,
         )
     elif gff3_handle and fasta_handle:
-        LOG.info("Parsing GFF3 and FASTA files:")
-        LOG.info(f"  {gff3_handle.name}")
-        LOG.info(f"  {fasta_handle.name}")
+        LOG.info("Parsing files...")
+        LOG.info(f"GFF: {gff3_handle.name}")
+        LOG.info(f"FASTA: {fasta_handle.name}")
         organism = gff3.parse(
             gff3_handle,
             fasta_handle,
@@ -48,8 +47,7 @@ def parse(
         organism.group()
 
     if output_handle:
-        LOG.info("\nWriting JSON: ")
-        LOG.info(f"  {output_handle.name}")
+        LOG.info(f"Writing JSON: {output_handle.name}")
         organism.to_json(fp=output_handle, indent=json_indent)
 
     return organism
