@@ -5,6 +5,8 @@ Implemented in pure Python using builtin libraries.
 
 
 ```
+$ g2j -h
+
 usage: Genome2JSON [-h] (-gbk GENBANK | -gff GENERAL) [-fa FASTA] -o OUTPUT
                    [--json_indent JSON_INDENT] [--grouped]
 
