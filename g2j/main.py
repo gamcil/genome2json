@@ -17,8 +17,10 @@ def parse(
     gff3_handle=None,
     fasta_handle=None,
     output_handle=None,
-    json_indent=2,
-    grouped=False,
+    indent=2,
+    collapse=False,
+    group=False,
+    translate=False,
     feature_types=None,
     save_scaffold_sequence=True,
 ):
@@ -29,40 +31,57 @@ def parse(
             feature_types=feature_types,
             save_scaffold_sequence=save_scaffold_sequence,
         )
-    elif gff3_handle and fasta_handle:
+    elif gff3_handle:
         LOG.info("Parsing files...")
-        LOG.info(f"GFF: {gff3_handle.name}")
-        LOG.info(f"FASTA: {fasta_handle.name}")
+        LOG.info(f"  GFF: {gff3_handle.name}")
+        if fasta_handle:
+            LOG.info(f"  FASTA: {fasta_handle.name}")
         organism = gff3.parse(
             gff3_handle,
-            fasta_handle,
+            fasta_handle=fasta_handle,
             feature_types=feature_types,
             save_scaffold_sequence=save_scaffold_sequence,
         )
     else:
         raise ValueError("Expected GenBank or GFF3+FASTA")
 
-    if grouped:
-        LOG.info("\nGrouping overlapping sequence features")
+    if collapse:
+        LOG.info("Collapsing same type sequence features")
+        organism.collapse()
+
+        if translate:
+            LOG.info("Translating CDS features")
+            organism.translate()
+
+    if group:
+        LOG.info("Grouping overlapping sequence features")
         organism.group()
+
+    LOG.info("Sorting sequence features")
+    organism.sort()
 
     if output_handle:
         LOG.info(f"Writing JSON: {output_handle.name}")
-        organism.to_json(fp=output_handle, indent=json_indent)
+        organism.to_json(fp=output_handle, indent=indent)
 
     return organism
 
 
 def run():
     args = get_arguments()
+    LOG.info("Starting genome2json")
     parse(
         genbank_handle=args.genbank,
         gff3_handle=args.general,
         fasta_handle=args.fasta,
         output_handle=args.output,
-        json_indent=args.json_indent,
-        grouped=args.grouped,
+        indent=args.indent,
+        collapse=args.collapse,
+        group=args.group,
+        translate=args.translate,
+        feature_types=args.feature_types,
     )
+    LOG.info("Done!")
 
 
 def get_arguments():
@@ -90,13 +109,39 @@ def get_arguments():
         help="Save JSON to file",
         type=argparse.FileType("w"),
     )
-    parser.add_argument("--json_indent", help="Number of spaces to indent in JSON", type=int, default=2)
-    parser.add_argument("--grouped", help="Group overlapping sequence features", action="store_true",)
+    parser.add_argument(
+        "-ft",
+        "--feature_types",
+        help="Feature types to save",
+        nargs="+",
+    )
+    parser.add_argument(
+        "-i",
+        "--indent",
+        help="Number of spaces to indent in JSON",
+        type=int,
+        default=2,
+    )
+    parser.add_argument(
+        "-c",
+        "--collapse",
+        help="Collapse same type sequence features (e.g. exons, CDS)",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-g",
+        "--group",
+        help="Group overlapping sequence features",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-t",
+        "--translate",
+        help="Translate CDS sequence features",
+        action="store_true",
+    )
 
     args = parser.parse_args()
-
-    if args.general and not args.fasta:
-        raise ValueError("FASTA file must be provided when parsing GFF3")
 
     return args
 

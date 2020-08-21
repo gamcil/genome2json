@@ -51,7 +51,14 @@ def link_features(features):
     }
 
     def get_values(f):
-        return set(f.qualifiers[t] for t in tags.intersection(f.qualifiers))
+        values = set()
+        for tag in tags.intersection(f.qualifiers):
+            value = f.qualifiers[tag]
+            if isinstance(value, list):
+                values.update(value)
+            else:
+                values.add(value)
+        return values
 
     def adjacency(features):
         """Generate adjacency list of Features.
@@ -102,16 +109,15 @@ def iter_overlapping_features(features, check_attributes=False):
     group, border = [first], first.location.max()
 
     for feature in sorted_features:
-        within_border = feature.location.min() <= border
-        shared_attrib = check_attributes and attribute_match(group[-1], feature)
-
-        if within_border or shared_attrib:
+        if (
+            feature.location.min() <= border
+            or check_attributes and attribute_match(group[-1], feature)
+        ):
             group.append(feature)
             border = max(border, feature.location.max())
         else:
             yield group
             group, border = [feature], feature.location.max()
-
     yield group
 
 
@@ -128,42 +134,24 @@ def group_overlapping_features(features, check_attributes=False):
     return forward + reverse
 
 
-def iter_collapsed_features(features):
-    """Find collapsible feature groups.
-    Able to dig out overlapping same-type features this way.
+def collapse_features(features):
+    """Collapses features that share the same ID.
+
+    For example, CDS features will typically share the same ID= in a GFF file, whereas
+    exons/introns/misc features will not. In this case, this function will collapse
+    the CDS features (e.g. single multi-interval Feature) and ignore the others.
     """
-    result, previous = [], None
-    for feature in features:
-        if previous and attribute_match(previous, feature):
-            result[-1].append(feature)
-        else:
-            result.append([feature])
-        previous = feature
-    return result
-
-
-def collapse_same_type_features(features):
-    """Combine features of the same type within an overlap group."""
-
     final = []
-    feats = sorted(features, key=lambda f: f.type)
-
-    for _, type_group in groupby(feats, key=lambda f: f.type):
-        type_group = list(type_group)
-
-        if len(type_group) == 1:
-            final.extend(type_group)
+    features.sort(key=lambda f: f.qualifiers["ID"])
+    for _, group in groupby(features, key=lambda f: f.qualifiers["ID"]):
+        group = list(group)
+        if len(group) == 1:
+            final.extend(group)
             continue
-
-        # To collapse, require at least one matching attribute
-        # e.g. multiple CDS should share the same ID | Parent | protein_id
-        for group in iter_collapsed_features(type_group):
-            first, *rest = group
-            for feature in rest:
-                first += feature
-            final.append(first)
-
-    # Now, group different type Feature objects by attribute_link
+        feature, *rest = group
+        for other in rest:
+            feature += other
+        final.append(feature)
     return final
 
 
@@ -197,5 +185,5 @@ def group_features(features, check_attributes=True):
             continue
         subgroups = link_features(group)
         for subgroup in subgroups:
-            results.append(collapse_same_type_features(subgroup))
+            results.append(subgroup)
     return sorted(results + other, key=lambda f: get_minimum(f))

@@ -33,7 +33,6 @@ def parse_attributes(string):
 
 def set_partiality(feature):
     """
-
     """
     partial = "partial" in feature.qualifiers
     start_range = "start_range" in feature.qualifiers
@@ -52,7 +51,7 @@ def set_partiality(feature):
 
 def parse(
     gff_handle,
-    fasta_handle,
+    fasta_handle=None,
     name=None,
     strain=None,
     feature_types=None,
@@ -64,19 +63,54 @@ def parse(
     CDS split over 5 rows will result in 5 separate Feature objects.
     """
 
+    header = None
+    sequence, sequences = None, {}
+    fasta_flag = False
+
+    qualifiers = {}
     scaffolds = defaultdict(list)
     feature = None
 
     for line in gff_handle:
+        if line.startswith("###"):
+            continue
+
+        # Check for the ##FASTA directive.
+        # If present, and save_scaffold_sequence=True, parse scaffold
+        # sequences and populate the sequences dictionary.
+        if save_scaffold_sequence and line.startswith("##FASTA"):
+            fasta_flag = True
+            continue
+        if fasta_flag:
+            if line.startswith(">"):
+                if sequence and header:
+                    sequences[header] = sequence
+                header = line[1:].strip()
+                sequence = ""
+            else:
+                sequence += line.strip()
+            continue
+
+        # Check for other official directives, e.g. ##species
+        if line.startswith(("##", "#!")):
+            key, value = line[2:].strip().split(" ", 1)
+            if key in ("sequence-region"):
+                continue
+            qualifiers[key] = value
+
+        # Ignore comments
         if line.startswith("#"):
             continue
 
+        # Should be at a delimited section now, so parse as normal
         scaffold, *fields = line.strip().split("\t")
 
-        assert len(fields) == 8, "Malformed GFF, field number mismatch"
+        if not len(fields) == 8:
+            raise ValueError("Malformed GFF, field number mismatch")
 
         _, type, start, end, _, strand, phase, attributes = fields
 
+        # Filter out any non-specified feature types
         if feature_types and type not in feature_types:
             continue
 
@@ -90,7 +124,8 @@ def parse(
         feature.location.strand = strand
 
         # Any extra saved attributes
-        feature.qualifiers.update(parse_attributes(attributes))
+        attributes = parse_attributes(attributes)
+        feature.qualifiers.update(attributes)
 
         # Partiality, assume non-partial but NCBI files will have partial=true,
         # start/end_range qualifiers
@@ -100,18 +135,26 @@ def parse(
         scaffolds[scaffold].append(feature)
 
     # Get assembly scaffold sequences from FASTA file
-    if save_scaffold_sequence:
-        sequences = fasta.parse(fasta_handle)
+    if save_scaffold_sequence and not sequences:
+        if fasta_handle:
+            sequences = fasta.parse(fasta_handle)
+        else:
+            raise ValueError(
+                "save_scaffold_sequence=True, but GFF contains no ##FASTA directive"
+                " and no FASTA file was provided."
+            )
 
     # Instantiate and return Organism
     return Organism(
         name,
         strain,
+        qualifiers=qualifiers,
         scaffolds=[
             Scaffold(
                 accession,
                 sequences[accession] if save_scaffold_sequence else "",
-                features)
+                features
+            )
             for accession, features in scaffolds.items()
         ],
     )
