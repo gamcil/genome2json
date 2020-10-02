@@ -32,8 +32,6 @@ def parse_attributes(string):
 
 
 def set_partiality(feature):
-    """
-    """
     partial = "partial" in feature.qualifiers
     start_range = "start_range" in feature.qualifiers
     end_range = "end_range" in feature.qualifiers

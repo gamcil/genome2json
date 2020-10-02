@@ -138,9 +138,9 @@ class Organism(Serialiser):
     @classmethod
     def from_dict(cls, d):
         return cls(
-            name=d["name"],
-            strain=d["strain"],
-            qualifiers=d["qualifiers"],
+            name=d.get("name"),
+            strain=d.get("strain"),
+            qualifiers=d.get("qualifiers"),
             scaffolds=[Scaffold.from_dict(scaffold) for scaffold in d["scaffolds"]],
         )
 
