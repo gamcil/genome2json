@@ -11,7 +11,7 @@ from g2j.classes import Organism, Scaffold, Feature, Location, Interval
 
 PATTERNS = {
     "scaffold": re.compile(r"LOCUS\s+?(?P<accession>\b[\w.-]+?)\s.+?\n//", re.DOTALL),
-    "organism": re.compile(r"ORGANISM\s+?(?P<organism>\w[\w .-]+?)[\n\r]"),
+    "organism": re.compile(r"ORGANISM\s+?(?P<organism>.+?)[\n\r]"),
     "strain": re.compile(r'/strain="(?P<strain>([\w .-]+?))"'),
     "features": re.compile(
         r"FEATURES {13}Location/Qualifiers(.+?)(?:ORIGIN|CONTIG)", re.DOTALL
